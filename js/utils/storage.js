@@ -105,6 +105,14 @@
     entry.timestamp = entry.timestamp || new Date().toISOString();
     history[toolName].unshift(entry);
 
+    // 每个工具最多保留 50 条
+    if (history[toolName].length > 50) {
+      history[toolName] = history[toolName].slice(0, 50);
+    }
+
+    this._write(STORAGE_KEYS.HISTORY, history);
+  };
+
   /**
    * 清空指定工具的历史记录
    * @param {string} toolName
@@ -112,14 +120,6 @@
   Storage.clearToolHistory = function(toolName) {
     var history = this.getHistory();
     delete history[toolName];
-    this._write(STORAGE_KEYS.HISTORY, history);
-  };
-
-    // 每个工具最多保留 50 条
-    if (history[toolName].length > 50) {
-      history[toolName] = history[toolName].slice(0, 50);
-    }
-
     this._write(STORAGE_KEYS.HISTORY, history);
   };
 

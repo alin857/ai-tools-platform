@@ -91,6 +91,18 @@
         self.currentModule = mod;
         if (mod && mod.render) {
           self.container.innerHTML = '';
+          // 积分提示条（非首页）
+          if (route.hash !== '#/' && window.Auth && Auth.isLoggedIn()) {
+            var pts = Auth.getPoints();
+            var ptsBar = document.createElement('div');
+            ptsBar.style.cssText = 'margin-bottom:10px;padding:8px 14px;background:' + (pts <= 10 ? 'rgba(255,107,107,0.1)' : 'rgba(77,166,255,0.05)') + ';border-radius:10px;font-size:12px;color:' + (pts <= 10 ? '#ff6b6b' : '#999') + ';display:flex;align-items:center;justify-content:space-between;';
+            ptsBar.innerHTML = '<span>💰 剩余积分：<b style="color:' + (pts <= 0 ? '#ff6b6b' : '#4da6ff') + ';">' + pts + '</b>' + (pts <= 0 ? '（功能已暂停）' : '') + '</span><span style="font-size:10px;">' + (pts <= 0 ? '点击充值 →' : '') + '</span>';
+            if (pts <= 0) {
+              ptsBar.style.cursor = 'pointer';
+              ptsBar.addEventListener('click', function() { Router.navigate('#/shop'); });
+            }
+            self.container.appendChild(ptsBar);
+          }
           mod.render(self.container);
         } else {
           self.container.innerHTML =

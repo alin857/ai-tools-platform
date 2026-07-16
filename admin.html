@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>管理后台 — AI 工具平台</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;background:#0d0d10;color:#e0e0e0;min-height:100vh}
+a{color:#4da6ff;text-decoration:none}
+button{cursor:pointer;font-family:inherit}
+input,select{font-family:inherit;outline:none;border:none;color:#e0e0e0}
+
+/* 登录页 */
+.login-wrap{max-width:380px;margin:80px auto 0;padding:20px}
+.login-wrap h1{text-align:center;font-size:24px;margin-bottom:8px;color:#f0f0f0}
+.login-wrap .sub{text-align:center;font-size:13px;color:#666;margin-bottom:28px}
+.login-wrap input{width:100%;padding:12px 16px;border-radius:10px;background:#1a1a1e;border:1px solid rgba(255,255,255,0.06);font-size:14px;margin-bottom:12px}
+.login-wrap input:focus{border-color:rgba(77,166,255,0.4)}
+.login-wrap .btn{width:100%;padding:12px;border-radius:10px;font-size:15px;font-weight:700;color:#fff;background:linear-gradient(135deg,#4da6ff,#7c5cfc);border:none;margin-top:8px}
+
+/* 主面板 */
+.admin-layout{display:flex;min-height:100vh}
+.sidebar{width:220px;background:#111;border-right:1px solid rgba(255,255,255,0.06);padding:20px 0;flex-shrink:0}
+.sidebar h2{padding:0 20px 20px;font-size:18px;color:#f0f0f0;border-bottom:1px solid rgba(255,255,255,0.06);margin-bottom:16px}
+.sidebar h2 span{color:#4da6ff}
+.sidebar a{display:flex;align-items:center;gap:8px;padding:10px 20px;font-size:13px;color:#999;transition:all 0.2s}
+.sidebar a:hover,.sidebar a.active{color:#fff;background:rgba(77,166,255,0.06);border-right:2px solid #4da6ff}
+.main{flex:1;padding:28px;overflow-y:auto}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:28px}
+.stat{padding:20px;background:#1a1a1e;border-radius:12px;border:1px solid rgba(255,255,255,0.06)}
+.stat .val{font-size:28px;font-weight:800;color:#f0f0f0}
+.stat .lbl{font-size:12px;color:#666;margin-top:4px}
+.section-title{font-size:16px;font-weight:700;color:#f0f0f0;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.card{background:#1a1a1e;border-radius:12px;border:1px solid rgba(255,255,255,0.06);padding:20px;margin-bottom:20px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:10px 12px;color:#666;font-weight:500;border-bottom:1px solid rgba(255,255,255,0.06);font-size:11px;text-transform:uppercase}
+td{padding:10px 12px;border-bottom:1px solid rgba(255,255,255,0.03)}
+.badge{padding:2px 8px;border-radius:6px;font-size:10px;font-weight:600}
+.badge-paid{background:rgba(0,200,150,0.1);color:#5eeeca}
+.badge-pending{background:rgba(255,140,66,0.1);color:#ffb088}
+.badge-signed{background:rgba(77,166,255,0.1);color:#4da6ff}
+.btn-sm{padding:6px 14px;border-radius:6px;font-size:11px;font-weight:600;border:none}
+.btn-blue{color:#fff;background:#4da6ff}
+.btn-red{color:#ff6b6b;background:rgba(255,107,107,0.08);border:1px solid rgba(255,107,107,0.15)}
+.btn-green{color:#fff;background:#5eeeca}
+input[type="number"],input[type="text"],input[type="password"]{padding:8px 12px;border-radius:8px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);font-size:13px}
+.toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:9999;padding:10px 24px;border-radius:20px;font-size:13px;font-weight:500;background:#1a1a1e;border:1px solid rgba(255,255,255,0.1);box-shadow:0 8px 30px rgba(0,0,0,0.5);animation:fadeIn 0.3s}
+.toast-ok{border-color:rgba(0,200,150,0.3)}
+.toast-err{border-color:rgba(255,107,107,0.3)}
+@keyframes fadeIn{from{opacity:0;transform:translateX(-50%) translateY(-10px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+@media(max-width:768px){.admin-layout{flex-direction:column}.sidebar{width:100%;display:flex;overflow-x:auto;padding:10px;border-right:none;border-bottom:1px solid rgba(255,255,255,0.06)}.sidebar h2{display:none}.sidebar a{flex-shrink:0;border-right:none!important;border-radius:8px}.stats{grid-template-columns:repeat(2,1fr)}.main{padding:16px}}
+</style>
+</head>
+<body>
+
+<!-- 登录页 -->
+<div id="loginPage" class="login-wrap">
+  <h1>🔐 管理后台</h1>
+  <div class="sub">AI 工具聚合平台 · 独立管理系统</div>
+  <input type="password" id="adminPass" placeholder="请输入管理密码">
+  <button class="btn" onclick="doLogin()">登录后台</button>
+  <div style="text-align:center;margin-top:16px;font-size:11px;color:#555;">默认密码: admin123</div>
+</div>
+
+<!-- 主面板 -->
+<div id="mainPanel" style="display:none;">
+<div class="admin-layout">
+<div class="sidebar">
+  <h2><span>AI</span> 管理后台</h2>
+  <a href="#" class="active" data-page="dashboard" onclick="switchPage('dashboard',this)">📊 仪表盘</a>
+  <a href="#" data-page="users" onclick="switchPage('users',this)">👥 用户管理</a>
+  <a href="#" data-page="orders" onclick="switchPage('orders',this)">📋 充值审核</a>
+  <a href="#" data-page="announce" onclick="switchPage('announce',this)">📢 系统公告</a>
+  <a href="#" data-page="support" onclick="switchPage('support',this)">📞 客服信息</a>
+  <a href="#" data-page="config" onclick="switchPage('config',this)">⚙️ API 配置</a>
+  <a href="#" data-page="settings" onclick="switchPage('settings',this)">🔒 系统设置</a>
+  <a href="#" onclick="doLogout()" style="color:#ff6b6b;margin-top:20px;">🚪 退出登录</a>
+</div>
+<div class="main" id="mainContent"></div>
+</div>
+</div>
+
+<script>
+var PASSWORD = localStorage.getItem('aigp_admin_pass') || 'admin123';
+var authed = false;
+
+function toast(msg, type) {
+  var t = document.createElement('div');
+  t.className = 'toast ' + (type === 'ok' ? 'toast-ok' : type === 'err' ? 'toast-err' : '');
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(function() { t.remove(); }, 2500);
+}
+
+function getUsers() { try { return JSON.parse(localStorage.getItem('aigp_users') || '{}'); } catch(e) { return {}; } }
+function saveUsers(u) { localStorage.setItem('aigp_users', JSON.stringify(u)); }
+function getOrders() { try { return JSON.parse(localStorage.getItem('aigp_orders') || '[]'); } catch(e) { return []; } }
+function saveOrders(o) { localStorage.setItem('aigp_orders', JSON.stringify(o)); }
+function getConfig() { try { return JSON.parse(localStorage.getItem('aigp_api_config') || '{}'); } catch(e) { return {}; } }
+function saveConfig(c) { localStorage.setItem('aigp_api_config', JSON.stringify(c)); }
+
+function doLogin() {
+  if (document.getElementById('adminPass').value === PASSWORD) {
+    authed = true;
+    document.getElementById('loginPage').style.display = 'none';
+    document.getElementById('mainPanel').style.display = 'block';
+    switchPage('dashboard', document.querySelector('.sidebar a[data-page="dashboard"]'));
+  } else { toast('密码错误', 'err'); }
+}
+
+function doLogout() {
+  authed = false;
+  document.getElementById('loginPage').style.display = 'block';
+  document.getElementById('mainPanel').style.display = 'none';
+}
+
+function switchPage(page, el) {
+  document.querySelectorAll('.sidebar a').forEach(function(a) { a.classList.remove('active'); });
+  if (el) el.classList.add('active');
+  var main = document.getElementById('mainContent');
+  if (page === 'dashboard') renderDashboard(main);
+  else if (page === 'users') renderUsers(main);
+  else if (page === 'orders') renderOrders(main);
+  else if (page === 'announce') renderAnnounce(main);
+  else if (page === 'support') renderSupport(main);
+  else if (page === 'config') renderConfig(main);
+  else if (page === 'settings') renderSettings(main);
+}
+
+// ====== 仪表盘 ======
+function renderDashboard(main) {
+  var users = getUsers();
+  var orders = getOrders();
+  var userList = Object.keys(users);
+  var totalUsers = userList.length;
+  var totalPoints = userList.reduce(function(s,u){return s + (users[u].points||0);}, 0);
+  var todaySigns = userList.filter(function(u){return users[u].lastSignIn === new Date().toDateString();}).length;
+  var pendingOrders = orders.filter(function(o){return o.status === 'pending';}).length;
+
+  var h = '<div class="stats">';
+  h += '<div class="stat"><div class="val">' + totalUsers + '</div><div class="lbl">注册用户</div></div>';
+  h += '<div class="stat"><div class="val" style="color:#4da6ff;">' + totalPoints + '</div><div class="lbl">平台总积分</div></div>';
+  h += '<div class="stat"><div class="val" style="color:#ffd700;">' + todaySigns + '</div><div class="lbl">今日签到</div></div>';
+  h += '<div class="stat"><div class="val" style="color:' + (pendingOrders > 0 ? '#ff6b6b' : '#5eeeca') + ';">' + pendingOrders + '</div><div class="lbl">待审核充值</div></div>';
+  h += '</div>';
+
+  h += '<div class="section-title">📊 最近注册</div><div class="card">';
+  h += '<table><tr><th>用户名</th><th>积分</th><th>注册时间</th><th>今日签到</th></tr>';
+  var recent = userList.sort(function(a,b){return (users[b].createdAt||'') > (users[a].createdAt||'') ? 1 : -1;}).slice(0, 5);
+  for (var i = 0; i < recent.length; i++) {
+    var u = users[recent[i]];
+    h += '<tr><td style="font-weight:600;">' + recent[i] + '</td><td style="color:#4da6ff;">💰 ' + (u.points||0) + '</td><td>' + new Date(u.createdAt).toLocaleDateString('zh-CN') + '</td><td>' + (u.lastSignIn === new Date().toDateString() ? '<span class="badge badge-signed">已签到</span>' : '未签到') + '</td></tr>';
+  }
+  if (!recent.length) h += '<tr><td colspan="4" style="color:#666;text-align:center;padding:20px;">暂无用户</td></tr>';
+  h += '</table></div>';
+
+  // 快捷操作
+  h += '<div class="section-title">⚡ 快捷操作</div><div class="card" style="display:flex;gap:10px;flex-wrap:wrap;">';
+  h += '<button class="btn-sm btn-blue" onclick="switchPage(\'users\',document.querySelector(\'.sidebar a[data-page=users]\'))">👥 管理用户</button>';
+  h += '<button class="btn-sm btn-blue" onclick="switchPage(\'orders\',document.querySelector(\'.sidebar a[data-page=orders]\'))">📋 审核充值</button>';
+  h += '<button class="btn-sm btn-blue" onclick="switchPage(\'config\',document.querySelector(\'.sidebar a[data-page=config]\'))">⚙️ API 配置</button>';
+  h += '<button class="btn-sm btn-green" onclick="switchPage(\'users\',document.querySelector(\'.sidebar a[data-page=users]\'))" style="background:#5eeeca;color:#0d0d10;">➕ 添加用户</button>';
+  h += '</div>';
+
+  main.innerHTML = h;
+}
+
+// ====== 用户管理 ======
+function renderUsers(main) {
+  var users = getUsers();
+  var userList = Object.keys(users);
+
+  var h = '<div class="section-title">👥 用户管理 <span style="font-size:12px;color:#666;font-weight:400;">（' + userList.length + ' 人）</span></div>';
+
+  // 添加用户
+  h += '<div class="card" style="margin-bottom:16px;">';
+  h += '<div style="font-size:13px;font-weight:600;margin-bottom:10px;">➕ 添加用户</div>';
+  h += '<div style="display:flex;gap:8px;">';
+  h += '<input type="text" id="newUser" placeholder="用户名" style="flex:1;">';
+  h += '<input type="password" id="newPass" placeholder="密码" style="flex:1;">';
+  h += '<input type="number" id="newPts" placeholder="积分" value="100" style="width:80px;">';
+  h += '<button class="btn-sm btn-blue" onclick="addUser()">添加</button>';
+  h += '</div></div>';
+
+  // 用户列表
+  h += '<div class="card"><table><tr><th>用户名</th><th>密码</th><th>积分</th><th>注册时间</th><th>签到</th><th>操作</th></tr>';
+  if (!userList.length) {
+    h += '<tr><td colspan="6" style="color:#666;text-align:center;padding:20px;">暂无注册用户</td></tr>';
+  } else {
+    userList.sort(function(a,b){return (users[b].createdAt||'') > (users[a].createdAt||'') ? 1 : -1;});
+    for (var i = 0; i < userList.length; i++) {
+      var uname = userList[i];
+      var u = users[uname];
+      h += '<tr>';
+      h += '<td style="font-weight:600;">' + uname + '</td>';
+      h += '<td style="color:#666;">' + u.password + '</td>';
+      h += '<td><input type="number" id="pts_' + uname + '" value="' + (u.points||0) + '" style="width:70px;"> <button class="btn-sm btn-blue" onclick="savePts(\'' + uname + '\')">保存</button></td>';
+      h += '<td style="font-size:11px;color:#666;">' + new Date(u.createdAt).toLocaleDateString('zh-CN') + '</td>';
+      h += '<td>' + (u.lastSignIn === new Date().toDateString() ? '<span class="badge badge-signed">已签到</span>' : '未签到') + '</td>';
+      h += '<td><button class="btn-sm btn-red" onclick="delUser(\'' + uname + '\')">删除</button></td>';
+      h += '</tr>';
+    }
+  }
+  h += '</table></div>';
+  main.innerHTML = h;
+}
+
+function addUser() {
+  var name = document.getElementById('newUser').value.trim();
+  var pass = document.getElementById('newPass').value.trim();
+  var pts = parseInt(document.getElementById('newPts').value) || 0;
+  if (!name || !pass) { toast('用户名和密码不能为空', 'err'); return; }
+  var users = getUsers();
+  if (users[name]) { toast('用户名已存在', 'err'); return; }
+  users[name] = { password: pass, points: pts, lastSignIn: null, createdAt: new Date().toISOString() };
+  saveUsers(users);
+  toast('用户 ' + name + ' 已添加', 'ok');
+  renderUsers(document.getElementById('mainContent'));
+}
+
+function savePts(uname) {
+  var val = parseInt(document.getElementById('pts_' + uname).value);
+  if (isNaN(val) || val < 0) { toast('积分格式错误', 'err'); return; }
+  var users = getUsers();
+  if (users[uname]) { users[uname].points = val; saveUsers(users); toast(uname + ' 积分更新为 ' + val, 'ok'); }
+}
+
+function delUser(uname) {
+  var users = getUsers();
+  delete users[uname];
+  saveUsers(users);
+  toast('已删除 ' + uname, 'ok');
+  renderUsers(document.getElementById('mainContent'));
+}
+
+// ====== 充值审核 ======
+function renderOrders(main) {
+  var orders = getOrders();
+  var h = '<div class="section-title">📋 充值订单</div><div class="card"><table><tr><th>用户</th><th>套餐</th><th>金额</th><th>积分</th><th>支付方式</th><th>时间</th><th>状态</th><th>操作</th></tr>';
+  if (!orders.length) {
+    h += '<tr><td colspan="8" style="color:#666;text-align:center;padding:20px;">暂无充值记录</td></tr>';
+  } else {
+    for (var i = 0; i < orders.length; i++) {
+      var o = orders[i];
+      h += '<tr>';
+      h += '<td style="font-weight:600;">' + (o.user || '?') + '</td>';
+      h += '<td>' + o.pkg + '</td>';
+      h += '<td>¥' + o.price + '</td>';
+      h += '<td style="color:#4da6ff;">+' + o.points + '</td>';
+      h += '<td>' + o.pay + '</td>';
+      h += '<td style="font-size:11px;color:#666;">' + new Date(o.time).toLocaleString('zh-CN') + '</td>';
+      h += '<td><span class="badge ' + (o.status === 'paid' ? 'badge-paid' : 'badge-pending') + '">' + (o.status === 'paid' ? '已到账' : '待审核') + '</span></td>';
+      h += '<td>' + (o.status === 'pending' ? '<button class="btn-sm btn-green" onclick="approveOrder(\'' + o.id + '\',\'' + o.pkg + '\')">确认到账</button>' : '—') + '</td>';
+      h += '</tr>';
+    }
+  }
+  h += '</table></div>';
+  main.innerHTML = h;
+}
+
+function approveOrder(oid, pkg) {
+  var orders = getOrders();
+  var targetOrder = null;
+  for (var i = 0; i < orders.length; i++) {
+    if (orders[i].id === oid) { orders[i].status = 'paid'; targetOrder = orders[i]; break; }
+  }
+  saveOrders(orders);
+
+  if (targetOrder) {
+    var targetUser = targetOrder.user;
+    // 旧订单没有用户字段，弹出选择框
+    if (!targetUser || targetUser === 'guest') {
+      var users = getUsers();
+      var userList = Object.keys(users);
+      if (!userList.length) { toast('没有注册用户，请先创建用户', 'err'); renderOrders(document.getElementById('mainContent')); return; }
+      var name = prompt('该订单未关联用户，请输入要充值的用户名：\n可选用户：' + userList.join(', '));
+      if (!name) { toast('已取消', 'err'); renderOrders(document.getElementById('mainContent')); return; }
+      targetUser = name.trim();
+    }
+
+    var users = getUsers();
+    if (users[targetUser]) {
+      users[targetUser].points = (users[targetUser].points || 0) + targetOrder.points;
+      saveUsers(users);
+      toast('✅ ' + targetUser + ' +' + targetOrder.points + ' 积分已到账', 'ok');
+    } else {
+      toast('用户 ' + targetUser + ' 不存在，请先创建用户', 'err');
+    }
+  }
+
+  renderOrders(document.getElementById('mainContent'));
+}
+
+// ====== 客服信息 ======
+function renderSupport(main) {
+  var info = {};
+  try { info = JSON.parse(localStorage.getItem('aigp_support') || '{}'); } catch(e) {}
+  var h = '<div class="section-title">📞 客服信息</div><div class="card">';
+  h += '<div style="font-size:12px;color:#666;margin-bottom:14px;">用户点击"📞客服"时显示的联系方式</div>';
+  var fields = [
+    { key: 'wechat', label: '💬 微信号', ph: 'AIGC_NightStar' },
+    { key: 'email', label: '📧 邮箱', ph: 'creator@aigc-studio.com' },
+    { key: 'phone', label: '📱 电话', ph: '138-0000-0000' },
+    { key: 'qq', label: '🐧 QQ号', ph: '123456789' },
+    { key: 'remark', label: '📝 备注说明', ph: '工作时间：周一至周五 9:00-18:00' }
+  ];
+  for (var i = 0; i < fields.length; i++) {
+    var f = fields[i];
+    h += '<div style="margin-bottom:10px;"><div style="font-size:12px;color:#999;margin-bottom:4px;">' + f.label + '</div>';
+    h += '<input type="text" id="sup_' + f.key + '" value="' + (info[f.key] || '').replace(/"/g,'&quot;') + '" placeholder="' + f.ph + '" style="width:100%;padding:8px 12px;border-radius:8px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);color:#e0e0e0;font-size:13px;"></div>';
+  }
+  h += '<button class="btn-sm btn-blue" onclick="saveSupport()">💾 保存客服信息</button>';
+  h += '</div>';
+  main.innerHTML = h;
+}
+
+function saveSupport() {
+  var info = {};
+  var fields = ['wechat','email','phone','qq','remark'];
+  for (var i = 0; i < fields.length; i++) {
+    var val = (document.getElementById('sup_' + fields[i]) || {}).value || '';
+    if (val.trim()) info[fields[i]] = val.trim();
+  }
+  localStorage.setItem('aigp_support', JSON.stringify(info));
+  toast('客服信息已保存', 'ok');
+}
+
+// ====== 系统公告 ======
+function renderAnnounce(main) {
+  var ann = localStorage.getItem('aigp_announce') || '';
+  var h = '<div class="section-title">📢 系统公告</div><div class="card">';
+  h += '<div style="font-size:12px;color:#666;margin-bottom:12px;">公告将在用户首页顶部显示</div>';
+  h += '<textarea id="announceText" style="width:100%;min-height:120px;padding:12px;border-radius:10px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);color:#e0e0e0;font-size:13px;resize:vertical;">' + ann + '</textarea>';
+  h += '<div style="display:flex;gap:10px;margin-top:12px;">';
+  h += '<button class="btn-sm btn-blue" onclick="saveAnnounce()">💾 保存公告</button>';
+  h += '<button class="btn-sm btn-red" onclick="clearAnnounce()">🗑️ 清除公告</button>';
+  h += '</div>';
+  h += '<div style="margin-top:12px;font-size:11px;color:#666;">当前状态: ' + (ann ? '<span style="color:#5eeeca;">已发布</span>' : '<span style="color:#666;">未发布</span>') + '</div>';
+  h += '</div>';
+
+  // 批量操作
+  h += '<div class="section-title" style="margin-top:20px;">🔧 批量操作</div><div class="card">';
+  h += '<div style="font-size:12px;color:#666;margin-bottom:10px;">对所有注册用户执行批量操作</div>';
+  h += '<div style="display:flex;gap:8px;flex-wrap:wrap;">';
+  h += '<input type="number" id="batchPts" placeholder="积分数量" value="50" style="width:100px;">';
+  h += '<button class="btn-sm btn-blue" onclick="batchAddPts()">➕ 全员加积分</button>';
+  h += '<button class="btn-sm" onclick="batchResetSignIn()" style="background:#1a1a1e;color:#999;border:1px solid rgba(255,255,255,0.06);">🔄 重置签到</button>';
+  h += '<button class="btn-sm btn-red" onclick="batchClearPts()">0️⃣ 全员清零</button>';
+  h += '</div>';
+  h += '<div id="batchResult" style="margin-top:8px;font-size:11px;"></div>';
+  h += '</div>';
+
+  main.innerHTML = h;
+}
+
+function saveAnnounce() {
+  var txt = document.getElementById('announceText').value.trim();
+  localStorage.setItem('aigp_announce', txt);
+  toast('公告已保存', 'ok');
+}
+
+function clearAnnounce() {
+  localStorage.removeItem('aigp_announce');
+  toast('公告已清除', 'ok');
+  renderAnnounce(document.getElementById('mainContent'));
+}
+
+function batchAddPts() {
+  var val = parseInt(document.getElementById('batchPts').value) || 50;
+  var users = getUsers();
+  var list = Object.keys(users);
+  for (var i = 0; i < list.length; i++) { users[list[i]].points = (users[list[i]].points || 0) + val; }
+  saveUsers(users);
+  document.getElementById('batchResult').innerHTML = '<span style="color:#5eeeca;">✅ 已为 ' + list.length + ' 位用户各加 ' + val + ' 积分</span>';
+}
+
+function batchResetSignIn() {
+  var users = getUsers();
+  var list = Object.keys(users);
+  for (var i = 0; i < list.length; i++) { users[list[i]].lastSignIn = null; }
+  saveUsers(users);
+  document.getElementById('batchResult').innerHTML = '<span style="color:#5eeeca;">✅ 已重置 ' + list.length + ' 位用户签到状态</span>';
+}
+
+function batchClearPts() {
+  var users = getUsers();
+  var list = Object.keys(users);
+  for (var i = 0; i < list.length; i++) { users[list[i]].points = 0; }
+  saveUsers(users);
+  document.getElementById('batchResult').innerHTML = '<span style="color:#ffb088;">⚠️ 已清零 ' + list.length + ' 位用户积分</span>';
+}
+
+// ====== API 配置 ======
+function renderConfig(main) {
+  var cfg = getConfig();
+  var defaults = { baseURL: 'https://apihub.agnes-ai.com/v1', apiKey: '', imageModel: 'agnes-image-2.1-flash', videoModel: 'agnes-video-v2.0', textModel: 'agnes-1.5-flash' };
+  var merged = {};
+  var keys = Object.keys(defaults);
+  for (var i = 0; i < keys.length; i++) { merged[keys[i]] = cfg[keys[i]] || defaults[keys[i]]; }
+
+  var fields = [
+    { key: 'apiKey', label: '🔑 API 密钥', type: 'password' },
+    { key: 'baseURL', label: '🌐 API 地址', type: 'text' },
+    { key: 'imageModel', label: '🎨 图片模型', type: 'text' },
+    { key: 'videoModel', label: '🎬 视频模型', type: 'text' },
+    { key: 'textModel', label: '📝 文本模型', type: 'text' }
+  ];
+
+  var h = '<div class="section-title">⚙️ API 配置</div><div class="card">';
+  h += '<div style="font-size:12px;color:#666;margin-bottom:16px;">配置后前端所有模块将使用此 API 调用 AI 模型</div>';
+  for (var i = 0; i < fields.length; i++) {
+    var f = fields[i];
+    h += '<div style="margin-bottom:12px;"><div style="font-size:12px;color:#999;margin-bottom:4px;">' + f.label + '</div>';
+    h += '<input type="' + f.type + '" id="cfg_' + f.key + '" value="' + (merged[f.key]||'').replace(/"/g,'&quot;') + '" style="width:100%;"></div>';
+  }
+  h += '<div style="display:flex;gap:10px;">';
+  h += '<button class="btn-sm btn-blue" onclick="saveApiConfig()">💾 保存配置</button>';
+  h += '<button class="btn-sm" onclick="testApi()" style="background:#1a1a1e;color:#999;border:1px solid rgba(255,255,255,0.06);">🧪 测试连接</button>';
+  h += '<button class="btn-sm btn-red" onclick="resetApiConfig()">🔄 恢复默认</button>';
+  h += '</div><div id="testResult" style="margin-top:10px;font-size:12px;"></div>';
+  h += '</div>';
+  main.innerHTML = h;
+}
+
+function saveApiConfig() {
+  var keys = ['apiKey','baseURL','imageModel','videoModel','textModel'];
+  var cfg = {};
+  for (var i = 0; i < keys.length; i++) { cfg[keys[i]] = (document.getElementById('cfg_' + keys[i]) || {}).value || ''; }
+  saveConfig(cfg);
+  toast('API 配置已保存', 'ok');
+}
+
+function testApi() {
+  var url = (document.getElementById('cfg_baseURL')||{}).value || 'https://apihub.agnes-ai.com/v1';
+  var key = (document.getElementById('cfg_apiKey')||{}).value || '';
+  var tr = document.getElementById('testResult');
+  tr.innerHTML = '测试中...';
+  fetch(url + '/models', { headers: { 'Authorization': 'Bearer ' + key } })
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if (d && d.data) tr.innerHTML = '<span style="color:#5eeeca;">✅ 连接成功 — ' + d.data.length + ' 个可用模型</span>';
+      else tr.innerHTML = '<span style="color:#ff6b6b;">❌ 响应异常</span>';
+    })
+    .catch(function(){ tr.innerHTML = '<span style="color:#ff6b6b;">❌ 连接失败，请检查地址和密钥</span>'; });
+}
+
+function resetApiConfig() {
+  localStorage.removeItem('aigp_api_config');
+  toast('已恢复默认配置', 'ok');
+  renderConfig(document.getElementById('mainContent'));
+}
+
+// ====== 系统设置 ======
+function renderSettings(main) {
+  var h = '<div class="section-title">🔒 系统设置</div>';
+  h += '<div class="card">';
+  h += '<div style="margin-bottom:14px;"><div style="font-size:13px;font-weight:600;margin-bottom:6px;">📱 收款二维码</div>';
+  h += '<div style="display:flex;gap:12px;margin-bottom:8px;">';
+  h += '<div style="flex:1;"><div style="font-size:11px;color:#666;margin-bottom:4px;">微信收款码</div><input type="file" id="qrWechat" accept="image/*" onchange="uploadQR(\'wechat\',this)"><div id="qrPreview_wechat" style="margin-top:4px;"></div></div>';
+  h += '<div style="flex:1;"><div style="font-size:11px;color:#666;margin-bottom:4px;">支付宝收款码</div><input type="file" id="qrAlipay" accept="image/*" onchange="uploadQR(\'alipay\',this)"><div id="qrPreview_alipay" style="margin-top:4px;"></div></div>';
+  h += '</div></div>';
+
+  h += '<div style="margin-bottom:14px;"><div style="font-size:13px;font-weight:600;margin-bottom:6px;">修改管理密码</div>';
+  h += '<input type="password" id="newPwd" placeholder="新密码" style="width:200px;margin-right:8px;">';
+  h += '<button class="btn-sm btn-blue" onclick="changePwd()">修改</button></div>';
+
+  h += '<div style="margin-bottom:14px;"><div style="font-size:13px;font-weight:600;margin-bottom:6px;">数据导出</div>';
+  h += '<button class="btn-sm" onclick="exportData()" style="background:#1a1a1e;color:#999;border:1px solid rgba(255,255,255,0.06);">📥 导出所有用户数据</button></div>';
+
+  h += '<div><div style="font-size:13px;font-weight:600;margin-bottom:6px;color:#ff6b6b;">危险操作</div>';
+  h += '<button class="btn-sm btn-red" onclick="clearAll()">🗑️ 清空所有数据</button></div>';
+  h += '</div>';
+  main.innerHTML = h;
+}
+
+function changePwd() {
+  var np = document.getElementById('newPwd').value.trim();
+  if (!np || np.length < 3) { toast('密码至少3位', 'err'); return; }
+  PASSWORD = np;
+  localStorage.setItem('aigp_admin_pass', np);
+  toast('管理密码已修改，新密码: ' + np, 'ok');
+}
+
+function exportData() {
+  var data = { users: getUsers(), orders: getOrders(), config: getConfig(), time: new Date().toISOString() };
+  var blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+  var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'aigp_backup.json'; a.click();
+  toast('数据已导出', 'ok');
+}
+
+function uploadQR(type, input) {
+  var file = input.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    localStorage.setItem('aigp_qr_' + type, e.target.result);
+    var prev = document.getElementById('qrPreview_' + type);
+    prev.innerHTML = '<img src="' + e.target.result + '" style="width:100px;height:100px;object-fit:contain;border-radius:8px;border:1px solid rgba(255,255,255,0.1);"><div style="font-size:10px;color:#5eeeca;">已保存</div>';
+    toast((type === 'wechat' ? '微信' : '支付宝') + '收款码已保存', 'ok');
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearAll() {
+  localStorage.removeItem('aigp_users');
+  localStorage.removeItem('aigp_orders');
+  toast('所有数据已清空', 'ok');
+  renderDashboard(document.getElementById('mainContent'));
+}
+
+// 回车登录
+document.getElementById('adminPass').addEventListener('keydown', function(e) { if (e.key === 'Enter') doLogin(); });
+</script>
+</body>
+</html>

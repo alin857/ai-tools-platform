@@ -165,13 +165,21 @@
 
   /* ======== 下载文件 ======== */
   UI.downloadFile = function(url, filename) {
-    var a = document.createElement('a');
-    a.href = url;
-    a.download = filename || 'download';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    UI.toast('开始下载', 'success');
+    // 使用 iframe 触发下载（最兼容跨域）
+    var isImage = /\.(jpg|jpeg|png|gif|webp|bmp)(\?|$)/i.test(url);
+    if (isImage) {
+      // 图片：在新窗口打开，用户右键保存
+      window.open(url, '_blank');
+      UI.toast('图片已打开，右键 → 另存为即可保存', 'success');
+    } else {
+      // 视频/其他：iframe 触发下载
+      var iframe = document.createElement('iframe');
+      iframe.style.display = 'none';
+      iframe.src = url;
+      document.body.appendChild(iframe);
+      setTimeout(function() { document.body.removeChild(iframe); }, 3000);
+      UI.toast('正在下载，请查看浏览器下载列表', 'success');
+    }
   };
 
   /* ======== 随机数辅助 ======== */
@@ -262,17 +270,86 @@
       });
     }
 
-    // 点击事件
-    if (onItemClick) {
-      var cards = section.querySelectorAll('.history-item');
-      for (var c = 0; c < cards.length; c++) {
-        cards[c].addEventListener('click', function() {
-          var idx = parseInt(this.getAttribute('data-idx'));
-          var entry = items[idx];
-          if (entry) onItemClick(entry);
-        });
-      }
+    // 默认点击事件：打开详情弹窗
+    var cards = section.querySelectorAll('.history-item');
+    for (var c = 0; c < cards.length; c++) {
+      cards[c].addEventListener('click', function() {
+        var idx = parseInt(this.getAttribute('data-idx'));
+        var entry = items[idx];
+        if (!entry) return;
+        if (onItemClick) { onItemClick(entry); return; }
+        UI._showHistoryDetail(entry);
+      });
     }
+  };
+
+  /* 历史记录详情弹窗 */
+  UI._showHistoryDetail = function(item) {
+    var overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.9);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:20px;';
+    overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
+
+    var type = item.type || 'image';
+    var content = '';
+
+    if (type === 'video' && (item.videoUrl || item.url)) {
+      content = '<video src="' + (item.videoUrl || item.url) + '" controls autoplay style="max-width:100%;max-height:60vh;border-radius:10px;"></video>';
+    } else if (type === 'image' && (item.imageUrl || item.url)) {
+      content = '<img src="' + (item.imageUrl || item.url) + '" style="max-width:100%;max-height:60vh;border-radius:10px;cursor:pointer;" onclick="UI.previewImage(\'' + (item.imageUrl || item.url) + '\')">';
+    } else if (type === 'article' || type === 'text') {
+      content = '<div style="max-height:60vh;overflow-y:auto;padding:14px;background:rgba(255,255,255,0.03);border-radius:10px;font-size:13px;line-height:1.8;color:#ccc;white-space:pre-wrap;">' + (item.content || item.prompt || '无内容') + '</div>';
+    } else {
+      content = '<div style="text-align:center;color:#999;padding:20px;">📄 ' + (item.prompt || item.tool || '历史记录') + '</div>';
+    }
+
+    var promptPreview = (item.prompt || '').substring(0, 100);
+    var time = item.timestamp ? new Date(item.timestamp).toLocaleString('zh-CN') : '';
+
+    overlay.innerHTML =
+      '<div style="background:#1a1a1e;border-radius:16px;padding:20px;max-width:480px;width:100%;border:1px solid rgba(255,255,255,0.08);position:relative;">' +
+        '<button id="closeHistDetail" style="position:absolute;top:12px;right:16px;background:none;border:none;color:#666;font-size:20px;cursor:pointer;">&times;</button>' +
+        '<div style="font-size:11px;color:#666;margin-bottom:8px;">' + time + '</div>' +
+        '<div style="margin-bottom:12px;">' + content + '</div>' +
+        (promptPreview ? '<div style="font-size:12px;color:#999;margin-bottom:12px;line-height:1.5;">📝 ' + promptPreview + '</div>' : '') +
+        '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
+          ((item.imageUrl || item.videoUrl || item.url) ? '<button class="btn-save-hist btn-action btn-action--primary">💾 保存</button>' : '') +
+          ((item.imageUrl || item.videoUrl || item.url) ? '<button class="btn-dl-hist btn-action btn-action--secondary">📥 下载</button>' : '') +
+          ((item.content) ? '<button class="btn-copy-hist btn-action btn-action--secondary">📋 复制</button>' : '') +
+          '<button class="btn-action btn-action--secondary" onclick="this.closest(\'div\').parentElement.remove()">关闭</button>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(overlay);
+
+    // 关闭
+    overlay.querySelector('#closeHistDetail').addEventListener('click', function() { overlay.remove(); });
+
+    // 保存
+    var saveBtn = overlay.querySelector('.btn-save-hist');
+    if (saveBtn) saveBtn.addEventListener('click', function() {
+      Storage.addProduct({
+        imageUrl: item.imageUrl || item.url || '',
+        videoUrl: item.videoUrl || '',
+        content: item.content || item.prompt || '',
+        toolName: item.tool || '',
+        type: type,
+        title: (item.prompt || '').substring(0, 50)
+      });
+      UI.toast('已保存', 'success');
+    });
+
+    // 下载
+    var dlBtn = overlay.querySelector('.btn-dl-hist');
+    if (dlBtn) dlBtn.addEventListener('click', function() {
+      var url = item.imageUrl || item.videoUrl || item.url;
+      if (url) UI.downloadFile(url, 'history-' + Date.now());
+    });
+
+    // 复制
+    var copyBtn = overlay.querySelector('.btn-copy-hist');
+    if (copyBtn) copyBtn.addEventListener('click', function() {
+      if (item.content) UI.copyText(item.content);
+      else if (item.prompt) UI.copyText(item.prompt);
+    });
   };
 
   // 监听网络状态变化

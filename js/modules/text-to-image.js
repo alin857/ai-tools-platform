@@ -244,7 +244,7 @@ h += '<div style="margin-top:12px;"><div class="tool-input-area__label">❌ 负�
             '<img src="' + img.url + '" alt="生成图 ' + (i + 1) + '" loading="lazy">' +
             '<div class="result-item__overlay">' +
               '<button class="result-item__action btn-preview">🔍 查看</button>' +
-              '<button class="result-item__action btn-download-single">📥 下载</button>' +
+              '<button class="result-item__action btn-download-single">📥 保存到本地</button>' +
               '<button class="result-item__action btn-save-single">💾 保存</button>' +
             '</div>' +
           '</div>';

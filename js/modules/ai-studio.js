@@ -174,7 +174,17 @@
         '<div style="margin-top:12px;">' +
           '<div class="tool-input-area__label">📝 动态描述</div>' +
           '<textarea class="tool-textarea studio-prompt" placeholder="描述你想要的动态效果..." rows="2"></textarea>' +
-        '</div></div>';
+        '</div>' +
+        '<div class="tool-params"><div class="tool-param-group">' +
+          '<div class="tool-param-group__label">⏱️ 视频时长</div>' +
+          '<select class="tool-select" id="studioDuration">' +
+            '<option value="3">3 秒</option><option value="5" selected>5 秒</option><option value="8">8 秒</option><option value="10">10 秒</option>' +
+          '</select>' +
+        '</div>' +
+        '<div class="tool-param-group">' +
+          '<div class="tool-param-group__label">📐 画幅比例</div>' +
+          '<select class="tool-select ratio-select"><option value="9:16" selected>9:16 竖屏</option><option value="16:9">16:9 横屏</option><option value="1:1">1:1 方形</option></select>' +
+        '</div></div></div>';
     },
 
     _buildRewriteInput: function() {
@@ -287,6 +297,8 @@
           apiPromise = (window.API||window.MockAPI).imageToVideo({
             prompt: promptText,
             style: activeStyle,
+            duration: parseInt((container.querySelector('#studioDuration') || {}).value || 5),
+            ratio: (container.querySelector('.ratio-select') || {}).value || '9:16',
             imageData: container._studioBase64,
             onProgress: function(pct, statusText) {
               var stepEl = container.querySelector('#progressStep');

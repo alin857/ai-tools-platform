@@ -27,7 +27,12 @@ h += '<div style="margin-top:12px;"><div class="tool-input-area__label">❌ 负�
         var a = this.avatars[i];
         h += '<button class="style-pill' + (a.name === self.selectedAvatar ? ' active' : '') + '" data-avatar="' + a.name + '">' + a.icon + ' ' + a.name + '</button>';
       }
-      h += '</div></div></div>';
+      h += '</div></div>';
+
+      h += '<div class="tool-param-group"><div class="tool-param-group__label">⏱️ 视频时长</div>';
+h += '<div class="tool-param-group"><div class="tool-param-group__label">📐 画幅比例</div><select class="tool-select ratio-select"><option value="9:16" selected>9:16 竖屏</option><option value="16:9">16:9 横屏</option><option value="1:1">1:1 方形</option></select></div>';
+      h += '<select class="tool-select" id="durationSelect"><option value="3">3 秒</option><option value="5" selected>5 秒</option><option value="8">8 秒</option><option value="10">10 秒</option></select>';
+      h += '</div></div>';
 
       h += '<button class="btn-generate" id="btnGenerate">🎬 生成数字人视频</button></div>';
       h += '<div class="tool-progress" id="progressArea"><div class="spinner"></div><div class="tool-progress__text">AI 正在合成数字人...</div><div class="tool-progress__step" id="progressStep">准备中</div></div>';
@@ -70,7 +75,7 @@ h += '<div style="margin-top:12px;"><div class="tool-input-area__label">❌ 负�
       UI.hideResult(ra); UI.showProgress(pa);
       btn.disabled = true; btn.textContent = '⏳ 合成中...';
 
-      (window.API||window.MockAPI).digitalHuman({ script: script, avatar: self.selectedAvatar, onProgress: function(pct, st) {
+      (window.API||window.MockAPI).digitalHuman({ script: script, avatar: self.selectedAvatar, duration: parseInt(container.querySelector('#durationSelect').value || 5), ratio: (container.querySelector('.ratio-select') || {}).value || '9:16', onProgress: function(pct, st) {
         container.querySelector('#progressStep').textContent = st || ('生成中 ' + pct + '%');
       }}).then(function(result) {
         UI.hideProgress(pa);

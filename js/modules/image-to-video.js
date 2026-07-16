@@ -112,6 +112,7 @@
       // 时长
       h += '<div class="tool-param-group">';
       h += '<div class="tool-param-group__label">⏱️ 视频时长</div>';
+h += '<div class="tool-param-group"><div class="tool-param-group__label">📐 画幅比例</div><select class="tool-select ratio-select"><option value="9:16" selected>9:16 竖屏</option><option value="16:9">16:9 横屏</option><option value="1:1">1:1 方形</option></select></div>';
       h += '<select class="tool-select" id="durationSelect">';
       for (var j = 0; j < this.durations.length; j++) {
         var d = this.durations[j];
@@ -367,6 +368,7 @@
         negativePrompt: negPrompt,
         style: this.selectedStyle,
         duration: duration,
+        ratio: (container.querySelector('.ratio-select') || {}).value || '9:16',
         imageData: isImgMode ? this.uploadedBase64 : null,
         onProgress: function(pct, statusText) {
           stepEl.textContent = statusText;
@@ -411,16 +413,27 @@
     },
 
     _showResult: function(container, result) {
+      var vu = result.videoUrl || '';
       container.querySelector('#videoResult').innerHTML =
-        '<video src="' + result.videoUrl + '" controls autoplay playsinline ' +
-          'style="width:100%;max-width:640px;border-radius:var(--radius-sm);background:#000;" ' +
-          'poster="' + (result.thumbnailUrl || '') + '">' +
+        '<video src="' + vu + '" controls autoplay playsinline ' +
+          'style="width:100%;max-width:640px;border-radius:10px;background:#000;" ' +
+          'poster="' + (result.thumbnailUrl || '') + '" ' +
+          'onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'block\';" ' +
+          'onloadeddata="this.style.display=\'block\';this.nextElementSibling.style.display=\'none\';">' +
         '</video>' +
+        '<div style="display:none;text-align:center;padding:20px;color:#999;">视频加载中或格式不支持<br><a href="' + vu + '" target="_blank" style="color:#4da6ff;">点击直接打开视频</a></div>' +
         '<div style="margin-top:8px;font-size:12px;color:var(--text-muted);">' +
           '时长：' + (result.duration || '5') + '秒 ｜ 模式：' + (this.activeMode === 'img2vid' ? '图生视频' : '文生视频') + ' ｜ 消耗：' + (result.cost || '—') + ' 积分' +
         '</div>';
       container._lastResult = result;
-        Storage.addHistory('image-to-video', { tool: 'image-to-video', prompt: prompt || promptText || '', type: 'result', timestamp: new Date().toISOString() }); UI.renderHistory(container, 'image-to-video');
+
+      // 更新下载按钮为保存到相册
+      var dlBtn = container.querySelector('#btnDownload');
+      if (dlBtn) {
+        dlBtn.textContent = '📥 下载视频';
+        dlBtn.className = 'btn-action btn-action--secondary';
+      }
+      Storage.addHistory('image-to-video', { tool: 'image-to-video', prompt: prompt || promptText || '', type: 'result', timestamp: new Date().toISOString() }); UI.renderHistory(container, 'image-to-video');
     },
 
     destroy: function() {

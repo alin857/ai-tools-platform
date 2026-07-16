@@ -168,6 +168,20 @@
         '</div>';
       h += '</div>';
 
+      // 文案话本
+      h +=
+        '<div style="margin-top:12px;">' +
+          '<div class="tool-input-area__label">📜 文案话本 <span style="font-weight:400;font-size:11px;color:var(--text-muted);">（你的探店模板或参考文案）</span></div>' +
+          '<textarea class="tool-textarea script-input" placeholder="输入你的探店文案模板或参考话术，AI 将基于此风格生成..." rows="3"></textarea>' +
+        '</div>';
+
+      // 提示词要求
+      h +=
+        '<div style="margin-top:12px;">' +
+          '<div class="tool-input-area__label">🎯 提示词要求 <span style="font-weight:400;font-size:11px;color:var(--text-muted);">（对 AI 生成内容的具体指令）</span></div>' +
+          '<textarea class="tool-textarea prompt-req-input" placeholder="具体生成要求，如：突出性价比、用活泼语气、包含3个必打卡理由、加上emoji、控制在500字内..." rows="2"></textarea>' +
+        '</div>';
+
       // 亮点描述
       h +=
         '<div style="margin-top:12px;">' +
@@ -418,10 +432,15 @@
     },
 
     _handleGenerate: function(container) {
-      var shopName = container.querySelector('.shop-name-input').value.trim();
-      if (!shopName) {
-        UI.toast('请输入店铺名称', 'error');
-        container.querySelector('.shop-name-input').focus();
+      var shopName = container.querySelector('.shop-name-input').value.trim() || '未知店铺';
+      var address = container.querySelector('.shop-address-input').value.trim();
+      var scriptText = container.querySelector('.script-input') ? container.querySelector('.script-input').value : '';
+      var promptReq = container.querySelector('.prompt-req-input') ? container.querySelector('.prompt-req-input').value : '';
+      var highlight = container.querySelector('.highlight-input').value.trim();
+
+      // 至少需要一个输入内容
+      if (!highlight && !scriptText && !promptReq && shopName === '未知店铺') {
+        UI.toast('请至少填写一项内容（店铺/亮点/话本/提示词）', 'error');
         return;
       }
 
@@ -453,8 +472,12 @@
       // ★ API 预留点 — 根据模式调用不同 API
       var promise;
       if (isVideo) {
+        var vidPrompt = '探店视频：' + shopName;
+        if (highlight) vidPrompt += '，亮点：' + highlight;
+        if (scriptText) vidPrompt += '，文案参考：' + scriptText;
+        if (promptReq) vidPrompt += '，要求：' + promptReq;
         promise = (window.API||window.MockAPI).imageToVideo({
-          prompt: '探店视频：' + shopName + '，' + (container.querySelector('.highlight-input').value || '宝藏店铺'),
+          prompt: vidPrompt,
           style: self.selectedVideoStyle,
           duration: parseInt(container.querySelector('#videoDuration').value),
           onProgress: function(pct, statusText) {
@@ -469,7 +492,9 @@
           shopType: self.selectedShopType,
           platform: self.selectedPlatform,
           tone: self.selectedTone,
-          highlight: container.querySelector('.highlight-input').value
+          highlight: highlight,
+          script: scriptText,
+          promptReq: promptReq
         });
       }
 
@@ -510,8 +535,8 @@
         video.load();
         container.querySelector('#btnDownload').style.display = 'inline-flex';
 
-        var shopName = container.querySelector('.shop-name-input').value || '宝藏店铺';
-        container.querySelector('#resultTitle').textContent = '🎬 探店 | ' + shopName;
+        var displayName = container.querySelector('.shop-name-input').value || '宝藏店铺';
+        container.querySelector('#resultTitle').textContent = '🎬 探店 | ' + displayName;
         container.querySelector('#resultContent').innerHTML = '';
         container.querySelector('#resultSubtitle').innerHTML =
           '<b>🎵 BGM：</b>' + this.selectedBGM + ' ｜ <b>风格：</b>' + this.selectedVideoStyle + '<br>' +
